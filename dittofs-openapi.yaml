@@ -1,0 +1,103 @@
+openapi: 3.0.3
+info:
+  title: DittoFS control-plane API (read-only subset)
+  version: "0.0-derived"
+  description: >-
+    Hand-derived from pkg/controlplane/api/router.go and
+    internal/controlplane/api/handlers/*.go in cubbit/dittofs (develop, 2026-11-17).
+    DittoFS ships no OpenAPI document today (docs/guide/snapshots.md section 14), so
+    this file covers only the GET routes that tell one operator story.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+tags:
+  - name: operator
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Liveness probe for the control plane
+      description: Unauthenticated. Reports that the process is up.
+      security: []
+      tags: [operator]
+      responses:
+        "200": {description: ok}
+  /health/ready:
+    get:
+      operationId: getReadiness
+      summary: Readiness probe (database reachable, adapters up)
+      security: []
+      tags: [operator]
+      responses:
+        "200": {description: ready}
+  /api/v1/shares:
+    get:
+      operationId: listShares
+      summary: List all shares with usage, quota and enabled state
+      description: Admin only. Returns a bare JSON array (no pagination) of share records, each with used_bytes, physical_bytes, quota_bytes and usage_percent.
+      tags: [operator]
+      responses:
+        "200": {description: array of shares}
+  /api/v1/shares/{name}/status:
+    get:
+      operationId: getShareStatus
+      summary: Health status of one share
+      description: Admin only. 404 if the share does not exist.
+      tags: [operator]
+      parameters:
+        - {name: name, in: path, required: true, schema: {type: string}, description: Share name without the leading slash}
+      responses:
+        "200": {description: share health status}
+  /api/v1/shares/{name}/quotas:
+    get:
+      operationId: listShareQuotas
+      summary: List quotas configured on a share
+      tags: [operator]
+      parameters:
+        - {name: name, in: path, required: true, schema: {type: string}}
+      responses:
+        "200": {description: quotas}
+  /api/v1/shares/{name}/snapshots:
+    get:
+      operationId: listShareSnapshots
+      summary: List snapshots of a share
+      tags: [operator]
+      parameters:
+        - {name: name, in: path, required: true, schema: {type: string}}
+      responses:
+        "200": {description: array of snapshot records}
+  /api/v1/blockstore/stats:
+    get:
+      operationId: getBlockstoreStats
+      summary: Block store statistics across all shares (cache and remote usage)
+      tags: [operator]
+      responses:
+        "200": {description: stats}
+  /api/v1/clients:
+    get:
+      operationId: listClients
+      summary: List connected NFS and SMB clients
+      description: Admin only. Each record has client_id, protocol, address, connected_at, last_activity.
+      tags: [operator]
+      parameters:
+        - {name: protocol, in: query, required: false, schema: {type: string, enum: [nfs, smb]}, description: Filter by protocol}
+      responses:
+        "200": {description: array of clients}
+  /api/v1/adapters:
+    get:
+      operationId: listAdapters
+      summary: List protocol adapters (NFS, SMB) with running state, port and health
+      tags: [operator]
+      responses:
+        "200": {description: array of adapters}
+  /api/v1/store/block:
+    get:
+      operationId: listBlockStores
+      summary: List configured block stores
+      tags: [operator]
+      responses:
+        "200": {description: array of block stores}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
